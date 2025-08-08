@@ -1,5 +1,10 @@
-const { app, BrowserWindow, session } = require('electron');
-const path = require('path');
+// ESM version av Electron main
+import { app, BrowserWindow, session } from 'electron';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -9,11 +14,11 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
-      webSecurity: false // helps with CORS in local app
+      webSecurity: false
     }
   });
 
-  // Optional: force a UA header (some IPTV providers are picky)
+  // Valfri header-tweak (UA etc)
   session.defaultSession.webRequest.onBeforeSendHeaders((details, cb) => {
     details.requestHeaders['User-Agent'] = details.requestHeaders['User-Agent'] || 'Mozilla/5.0';
     cb({ cancel: false, requestHeaders: details.requestHeaders });
