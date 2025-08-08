@@ -16,23 +16,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug env
+        shell: pwsh
+        run: |
+          node -v
+          npm -v
+          git rev-parse --short HEAD
+          Get-ChildItem -Force | Select-Object Name,Length | Format-Table
+          if (Test-Path package.json) { Get-Content package.json | Select-Object -First 60 }
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install deps
+      - name: Install deps (ci if lock exists)
         shell: pwsh
         run: |
-          if (Test-Path package-lock.json) {
-            npm ci
-          } else {
-            npm install
-          }
+          if (Test-Path package-lock.json) { npm ci } else { npm install }
+          npm ls --depth=0 || echo "npm ls returned non-zero (ok to ignore)"
 
-      - name: Build Windows installer
-        run: npm run dist
+      - name: Build web (Vite)
+        run: npm run build
+        env:
+          CI: true
+
+      - name: Build Windows installer (electron-builder)
+        run: npx electron-builder --win --x64 --publish never
         env:
           # (valfritt) kodsignering via secrets
           CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
@@ -46,7 +57,7 @@ jobs:
             dist/*.exe
             dist/*.msi
             dist/*.zip
-          if-no-files-found: warn
+          if-no-files-found: error
 
       - name: Create GitHub Release (on tag)
         if: startsWith(github.ref, 'refs/tags/')
