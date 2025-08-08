@@ -11,6 +11,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,12 +23,18 @@ jobs:
           cache: 'npm'
 
       - name: Install deps
+        shell: pwsh
         run: |
-          npm ci || npm install
+          if (Test-Path package-lock.json) {
+            npm ci
+          } else {
+            npm install
+          }
 
       - name: Build Windows installer
         run: npm run dist
         env:
+          # (valfritt) kodsignering via secrets
           CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
