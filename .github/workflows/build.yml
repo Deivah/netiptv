@@ -31,21 +31,29 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install deps (ci if lock exists)
+      # Kör npm ci om lock-fil finns, annars npm install
+      - name: Install deps
         shell: pwsh
         run: |
           if (Test-Path package-lock.json) { npm ci } else { npm install }
           npm ls --depth=0 || echo "npm ls returned non-zero (ok to ignore)"
 
+      # Bygg Vite-webben först (bra felutskrifter om något saknas)
       - name: Build web (Vite)
         run: npm run build
         env:
           CI: true
 
-      - name: Build Windows installer (electron-builder)
+      # O-signerat bygge (default om inga cert-secrets finns)
+      - name: Build Windows installer (unsigned)
+        if: ${{ !secrets.WIN_CSC_LINK }}
+        run: npx electron-builder --win --x64 --publish never
+
+      # Signerat bygge (körs bara om du lagt in cert i repo-secrets)
+      - name: Build Windows installer (signed)
+        if: ${{ secrets.WIN_CSC_LINK }}
         run: npx electron-builder --win --x64 --publish never
         env:
-          # (valfritt) kodsignering via secrets
           CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
