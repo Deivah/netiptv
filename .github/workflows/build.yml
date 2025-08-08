@@ -16,46 +16,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Debug env
-        shell: pwsh
-        run: |
-          node -v
-          npm -v
-          git rev-parse --short HEAD
-          Get-ChildItem -Force | Select-Object Name,Length | Format-Table
-          if (Test-Path package.json) { Get-Content package.json | Select-Object -First 60 }
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      # Kör npm ci om lock-fil finns, annars npm install
+      # Use ci if lock exists, else install
       - name: Install deps
         shell: pwsh
         run: |
           if (Test-Path package-lock.json) { npm ci } else { npm install }
-          npm ls --depth=0 || echo "npm ls returned non-zero (ok to ignore)"
 
-      # Bygg Vite-webben först (bra felutskrifter om något saknas)
       - name: Build web (Vite)
         run: npm run build
-        env:
-          CI: true
 
-      # O-signerat bygge (default om inga cert-secrets finns)
-      - name: Build Windows installer (unsigned)
-        if: ${{ !secrets.WIN_CSC_LINK }}
+      # Always unsigned (no secrets / conditions)
+      - name: Build Windows installer
         run: npx electron-builder --win --x64 --publish never
-
-      # Signerat bygge (körs bara om du lagt in cert i repo-secrets)
-      - name: Build Windows installer (signed)
-        if: ${{ secrets.WIN_CSC_LINK }}
-        run: npx electron-builder --win --x64 --publish never
-        env:
-          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
